@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="fi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#171713">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Treenipäiväkirja">
+<link rel="manifest" href="./manifest.json">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>Oma treenipäiväkirja</title>
+<style>
+:root{color-scheme:dark;--bg:#171713;--panel:#292822;--line:#414037;--muted:#99978f;--green:#70c998;--text:#f3f0e9}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font:16px -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+button,input{font:inherit}button{cursor:pointer;color:inherit}.wrap{max-width:620px;margin:auto;padding:calc(20px + env(safe-area-inset-top)) 16px calc(30px + env(safe-area-inset-bottom))}
+.muted{color:var(--muted)}.green{color:var(--green)}.panel,.day{background:var(--panel);border:1px solid #38372f;border-radius:15px}.day{padding:14px;margin:0 0 10px}
+.btn{background:#33332b;border:1px solid #49483e;border-radius:10px;padding:10px 13px}.primary{background:#397e5b;border:0;border-radius:10px;padding:12px 15px;font-weight:650}
+input{width:100%;min-width:0;background:#191915;border:1px solid #49483e;border-radius:8px;color:white;padding:10px}input:focus{outline:1px solid var(--green)}
+.tabs{display:flex;border-bottom:1px solid var(--line);margin:18px 0}.tab{padding:11px 13px;color:#aaa69c;border:0;border-bottom:2px solid transparent;background:none;font-size:13px}.tab.active{color:var(--green);border-color:var(--green)}
+.exercise{border-top:1px solid #48463d;padding:14px 0}.setrow{display:grid;grid-template-columns:30px 1fr 1fr 32px;gap:7px;align-items:center;margin-top:7px}.setrow input{text-align:center;padding:9px 3px;font-size:14px}
+.hidden{display:none!important}.small{font-size:12px}.danger{color:#e89b8d}.modal{position:fixed;inset:0;background:#000b;display:flex;align-items:flex-end;justify-content:center;padding:12px;z-index:5}.dialog{width:100%;max-width:480px;background:#25241f;border-radius:18px;padding:20px;border:1px solid #454338}.field{display:block;margin:12px 0 5px;font-size:12px;color:var(--muted)}
+@media(min-width:560px){.modal{align-items:center}}
+</style>
+</head>
+<body><main class="wrap" id="app">
+<header style="display:flex;justify-content:space-between;align-items:center;margin-bottom:22px">
+ <div><div class="muted" style="font-size:11px;letter-spacing:2px;font-weight:700">MY TRAINING</div><h1 style="font-size:25px;margin:5px 0 0">Treenipäiväkirja</h1></div>
+ <div class="small" style="text-align:right"><div class="muted">PAIKALLINEN</div><div class="green">● Tallennus päällä</div></div>
+</header>
+<div style="display:flex;align-items:center;justify-content:space-between">
+ <button class="btn" id="prev">‹</button><div style="text-align:center"><b id="weektitle">Viikko 1</b><div class="muted small" id="weekcount">0 / 3 treeniä</div></div><button class="btn" id="next">›</button>
+</div>
+<div style="height:6px;background:#34332b;border-radius:8px;margin:15px 0 5px;overflow:hidden"><div id="progress" style="height:100%;width:0;background:var(--green)"></div></div>
+<nav class="tabs"><button class="tab active" data-tab="week">VIIKKO</button><button class="tab" data-tab="history">HISTORIA</button><button class="tab" data-tab="stats">KEHITYS</button></nav>
+<section id="weekview"><div id="days"></div><button class="btn" id="addday" style="width:100%;margin-top:4px">＋ Lisää treeni</button><p class="muted small" style="text-align:center;margin-top:18px">Tiedot tallentuvat tämän laitteen selaimeen.</p></section>
+<section id="workoutview" class="hidden"><button id="back" class="green" style="background:none;border:0;padding:0 0 16px">← Takaisin viikkoon</button><div style="display:flex;justify-content:space-between;gap:10px;margin-bottom:12px"><div><div id="workday" class="muted small"></div><h2 id="worktitle" style="margin:4px 0"></h2></div><button id="finish" class="primary" style="font-size:13px">Merkitse tehdyksi</button></div><div id="workexercises"></div><button id="addexercise" class="btn" style="width:100%;margin-top:12px">＋ Lisää liike</button></section>
+<section id="historyview" class="hidden"><h3>Harjoitushistoria</h3><div id="historylist"></div></section>
+<section id="statsview" class="hidden"><h3>Voimakehitys</h3><p class="muted small">Kirjattujen sarjojen painot ajan mukaan.</p><div id="statslist"></div></section>
+<footer class="muted small" style="text-align:center;border-top:1px solid var(--line);margin-top:30px;padding-top:16px">OMA TREENIPÄIVÄKIRJA · V1.0</footer>
+</main>
+<div id="modal" class="modal hidden"><div class="dialog"><h3 id="modaltitle" style="margin:0 0 15px">Lisää</h3><div id="modalbody"></div><div style="display:flex;gap:8px;margin-top:20px"><button class="btn" id="cancel" style="flex:1">Peruuta</button><button class="primary" id="save" style="flex:1">Tallenna</button></div></div></div>
+<script>
+(()=>{
+const $=id=>document.getElementById(id),KEY='oma_treenipaivakirja_v1';
+const initial=()=>({weeks:[{days:[
+{id:1,name:'Koko keho A',day:'MA',done:false,exercises:[{name:'Takakyykky',sets:3,reps:'8–10',logs:[]},{name:'Penkkipunnerrus',sets:3,reps:'10–12',logs:[]},{name:'Kulmasoutu tangolla',sets:3,reps:'10–12',logs:[]}]},
+{id:2,name:'Koko keho B',day:'KE',done:false,exercises:[{name:'Maastaveto',sets:3,reps:'5',logs:[]},{name:'Pystypunnerrus käsipainoilla',sets:3,reps:'8',logs:[]},{name:'Lankku',sets:2,reps:'40 s',logs:[]}]},
+{id:3,name:'Koko keho C',day:'PE',done:false,exercises:[{name:'Romanialainen maastaveto',sets:3,reps:'10',logs:[]},{name:'Bulgarialainen askelkyykky',sets:2,reps:'8 / jalka',logs:[]},{name:'Käsipainosoutu',sets:3,reps:'10',logs:[]}]}
+]}],nextId:4});
+let data;try{data=JSON.parse(localStorage.getItem(KEY))||initial()}catch(e){data=initial()}
+let wi=0,selected=null,modalSave=null;
+const week=()=>data.weeks[wi],persist=()=>localStorage.setItem(KEY,JSON.stringify(data));
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function show(id){['weekview','workoutview','historyview','statsview'].forEach(x=>$(x).classList.toggle('hidden',x!==id))}
+function render(){let ds=week().days,done=ds.filter(d=>d.done).length;$('weektitle').textContent='Viikko '+(wi+1);$('weekcount').textContent=done+' / '+ds.length+' treeniä';$('progress').style.width=(ds.length?done/ds.length*100:0)+'%';$('prev').disabled=wi===0;$('prev').style.opacity=wi===0?'.3':'1';
+$('days').innerHTML=ds.map(d=>`<article class="day"><div style="display:flex;align-items:center;justify-content:space-between;gap:8px"><div style="display:flex;align-items:center;gap:12px;min-width:0"><b class="green small">${esc(d.day)}</b><button data-open="${d.id}" style="background:none;border:0;font-weight:700;text-align:left">${esc(d.name)}</button></div><div style="display:flex;align-items:center;gap:8px"><span class="small ${d.done?'green':'muted'}">${d.done?'✓ Tehty':d.exercises.length+' liikettä'}</span><button data-edit="${d.id}" class="muted" style="background:none;border:0">···</button></div></div><div style="padding:12px 0 0 29px">${d.exercises.map(e=>`<div style="display:flex;justify-content:space-between;gap:8px;font-size:13px;margin:7px 0"><span>${esc(e.name)}</span><span class="muted">${e.sets} × ${esc(e.reps)}</span></div>`).join('')}</div></article>`).join('')||'<p class="muted">Ei treenejä tällä viikolla.</p>'}
+function openWorkout(id){selected=id;let d=week().days.find(x=>x.id===id);if(!d)return;show('workoutview');$('workday').textContent='VIIKKO '+(wi+1)+' · '+d.day;$('worktitle').textContent=d.name;$('finish').textContent=d.done?'✓ Tehty':'Merkitse tehdyksi';
+$('workexercises').innerHTML=d.exercises.map((e,i)=>`<div class="exercise"><div style="display:flex;justify-content:space-between;gap:8px"><div><b style="font-size:14px">${esc(e.name)}</b><div class="muted small" style="margin-top:4px">Tavoite ${e.sets} × ${esc(e.reps)}</div></div><button data-exedit="${i}" class="muted small" style="background:none;border:0">Muokkaa</button></div><div class="setrow small muted"><span>SARJA</span><span>PAINO (KG)</span><span>TOISTOT</span><span></span></div>${Array.from({length:e.sets},(_,j)=>{let l=e.logs[j]||{};return `<div class="setrow"><span class="muted small">${j+1}</span><input type="number" min="0" step=".5" placeholder="kg" value="${esc(l.weight??'')}" data-log="${i},${j},weight"><input type="number" min="0" step="1" placeholder="toistot" value="${esc(l.reps??'')}" data-log="${i},${j},reps"><button data-clear="${i},${j}" class="muted">×</button></div>`}).join('')}<div style="display:flex;justify-content:space-between;margin-top:10px"><button data-addset="${i}" class="green small" style="background:none;border:0">＋ Lisää sarja</button><span class="muted small">${e.logs.filter(l=>l&&l.weight!==''&&l.weight!=null).length} kirjattua sarjaa</span></div></div>`).join('')||'<p class="muted">Lisää ensimmäinen liike.</p>'}
+function modal(title,html,save){$('modaltitle').textContent=title;$('modalbody').innerHTML=html;$('modal').classList.remove('hidden');modalSave=save}
+function close(){$('modal').classList.add('hidden');modalSave=null}
+function history(){let rows=[];data.weeks.forEach((w,i)=>w.days.forEach(d=>{if(d.done||d.exercises.some(e=>e.logs.some(l=>l&&l.weight!=='')))rows.push({w:i+1,d})}));$('historylist').innerHTML=rows.reverse().map(({w,d})=>`<div class="panel" style="padding:13px;margin-bottom:9px"><div style="display:flex;justify-content:space-between"><b>${esc(d.name)}</b><span class="muted small">Viikko ${w}</span></div><div class="muted small" style="margin-top:8px">${d.exercises.map(e=>esc(e.name)+': '+e.logs.filter(l=>l&&l.weight!=='').map(l=>esc(l.weight)+' kg × '+esc(l.reps||'–')).join(', ')).filter(Boolean).join(' · ')}</div></div>`).join('')||'<p class="muted">Ei vielä kirjattuja harjoituksia.</p>'}
+function stats(){let names={};data.weeks.forEach((w,i)=>w.days.forEach(d=>d.exercises.forEach(e=>e.logs.forEach(l=>{if(l&&l.weight!==''&&Number(l.weight)>0)(names[e.name]??=[]).push({week:i+1,weight:+l.weight,reps:l.reps})}))));$('statslist').innerHTML=Object.entries(names).map(([n,logs])=>`<div class="panel" style="padding:13px;margin-bottom:9px"><b>${esc(n)}</b>${logs.map(l=>`<div style="display:flex;justify-content:space-between;margin-top:9px" class="small"><span class="muted">Viikko ${l.week} · ${l.reps||'–'} toistoa</span><b>${l.weight} kg</b></div>`).join('')}</div>`).join('')||'<p class="muted">Kirjaa ensin painoja, niin näet kehityksen täällä.</p>'}
+$('prev').onclick=()=>{if(wi>0){wi--;render()}};$('next').onclick=()=>{if(wi===data.weeks.length-1)data.weeks.push({days:week().days.map(d=>({...JSON.parse(JSON.stringify(d)),id:data.nextId++,done:false,exercises:d.exercises.map(e=>({...e,logs:[]}))}))});wi++;persist();render()};
+document.querySelectorAll('.tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));show(b.dataset.tab==='week'?'weekview':b.dataset.tab==='history'?'historyview':'statsview');if(b.dataset.tab==='history')history();if(b.dataset.tab==='stats')stats()});
+$('days').onclick=e=>{let o=e.target.closest('[data-open]'),ed=e.target.closest('[data-edit]');if(o)openWorkout(+o.dataset.open);if(ed){let d=week().days.find(x=>x.id===+ed.dataset.edit);modal('Muokkaa treeniä',`<label class="field">Treenin nimi</label><input id="mn" value="${esc(d.name)}"><label class="field">Viikonpäivä</label><input id="md" value="${esc(d.day)}" maxlength="3"><button id="delday" class="danger" style="background:none;border:0;margin-top:15px">Poista treeni</button>`,()=>{d.name=$('mn').value;d.day=$('md').value.toUpperCase();persist();close();render()});$('delday').onclick=()=>{if(confirm('Poistetaanko treeni?')){week().days=week().days.filter(x=>x.id!==d.id);persist();close();render()}}}};
+$('addday').onclick=()=>modal('Uusi treeni','<label class="field">Treenin nimi</label><input id="mn" placeholder="Esim. Koko keho D"><label class="field">Päivä</label><input id="md" placeholder="LA" maxlength="3">',()=>{week().days.push({id:data.nextId++,name:$('mn').value||'Uusi treeni',day:$('md').value.toUpperCase()||'MA',done:false,exercises:[]});persist();close();render()});
+$('back').onclick=()=>{show('weekview');render()};$('workexercises').oninput=e=>{if(e.target.dataset.log){let[i,j,k]=e.target.dataset.log.split(','),ex=week().days.find(x=>x.id===selected).exercises[+i];ex.logs[+j]=ex.logs[+j]||{};ex.logs[+j][k]=e.target.value;persist()}};
+$('workexercises').onclick=e=>{let c=e.target.closest('[data-clear]');if(c){let[i,j]=c.dataset.clear.split(','),d=week().days.find(x=>x.id===selected);d.exercises[i].logs[j]={};persist();openWorkout(selected);return}let a=e.target.closest('[data-addset]');if(a){week().days.find(x=>x.id===selected).exercises[+a.dataset.addset].sets++;persist();openWorkout(selected);return}let ed=e.target.closest('[data-exedit]');if(ed){let d=week().days.find(x=>x.id===selected),i=+ed.dataset.exedit,ex=d.exercises[i];modal('Muokkaa liikettä',`<label class="field">Liikkeen nimi</label><input id="en" value="${esc(ex.name)}"><label class="field">Sarjat</label><input id="es" type="number" min="1" value="${ex.sets}"><label class="field">Toistot</label><input id="er" value="${esc(ex.reps)}"><button id="delex" class="danger" style="background:none;border:0;margin-top:15px">Poista liike</button>`,()=>{ex.name=$('en').value;ex.sets=Math.max(1,+$('es').value);ex.reps=$('er').value;persist();close();openWorkout(selected)});$('delex').onclick=()=>{if(confirm('Poistetaanko liike?')){d.exercises.splice(i,1);persist();close();openWorkout(selected)}}}};
+$('addexercise').onclick=()=>modal('Lisää liike','<label class="field">Liikkeen nimi</label><input id="en" placeholder="Esim. Hauiskääntö"><label class="field">Sarjat</label><input id="es" type="number" value="3"><label class="field">Toistot</label><input id="er" value="10">',()=>{week().days.find(x=>x.id===selected).exercises.push({name:$('en').value||'Uusi liike',sets:Math.max(1,+$('es').value||3),reps:$('er').value||'10',logs:[]});persist();close();openWorkout(selected)});
+$('finish').onclick=()=>{let d=week().days.find(x=>x.id===selected);d.done=!d.done;persist();openWorkout(selected);render()};$('cancel').onclick=close;$('save').onclick=()=>modalSave&&modalSave();$('modal').onclick=e=>{if(e.target===$('modal'))close()};render();
+})();
+</script>
+<script>if('serviceWorker'in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));</script>
+</body></html>
