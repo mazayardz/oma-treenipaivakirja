@@ -20,3 +20,9 @@ Treenit tallentuvat selaimen localStorageen tällä laitteella. Ne eivät synkro
 
 ## Päivitys
 Kun lataat myöhemmin uuden `index.html`-version repositoryyn, service workerin CACHE-tunniste kannattaa päivittää tiedostossa `sw.js`, jotta vanha versio ei jää välimuistiin.
+
+## Versio 1.1
+- Lankulle aikakirjaus sekunteina.
+- Liikkeelle valittava mittaustapa: paino + toistot, aika tai toistot.
+- Koko treenikortti avaa harjoituksen.
+- Olemassa olevat paikalliset tiedot säilyvät samalla osoitteella ja laitteella.
